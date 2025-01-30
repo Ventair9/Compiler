@@ -37,10 +37,14 @@ class Lexer:
     
     #skip comments
     def skipComment(self):
-        pass
+        if self.currentChar == "#":
+            while self.currentChar != "\n":
+                self.nextChar()
     
     #return token next
     def getToken(self):
+        self.skipWhitespace()
+        self.skipComment()
         token = None
         
         if self.currentChar == "+":
@@ -51,6 +55,66 @@ class Lexer:
             token = Token(self.currentChar, TokenType.ASTERISK)
         elif self.currentChar == "/":
             token = Token(self.currentChar, TokenType.SLASH)
+        elif self.currentChar == "=":
+            if self.peek() == "=":
+                lastChar = self.currentChar
+                self.nextChar()
+                token = Token(lastChar + self.currentChar, TokenType.EQEQ)
+            else:
+                token = Token(self.currentChar, TokenType.EQ)
+        elif self.currentChar == ">":
+            if self.peek() == "=":
+                lastChar = self.currentChar
+                self.nextChar()
+                token = Token(lastChar + self.currentChar, TokenType.GTEQ)
+            else:
+                token = Token(self.currentChar, TokenType.GT)
+        elif self.currentChar == "<":
+                if self.peek() == "=":
+                    lastChar = self.currentChar
+                    self.nextChar()
+                    token = Token(lastChar + self.currentChar, TokenType.LTEQ)
+                else:
+                    token = Token(self.currentChar, TokenType.LT)
+        elif self.currentChar == "!":
+            if self.peek() == "=":
+                lastChar = self.currentChar
+                self.nextChar()
+                token = Token(lastChar + self.currentChar, TokenType.NOTEQ)
+            else:
+                self.abort("Expected !=, got !" + self.peek())
+        elif self.currentChar == '\"':
+            self.nextChar()
+            startPos = self.currentPos
+            while self.currentChar != '\"':
+                if self.currentChar == "\r" or self.currentChar == "\n" or self.currentChar == "\t" or self.currentChar == "\\" or self.currentChar == "%":
+                    self.abort("Illegal characters in string.")
+                self.nextChar()
+            tokenText = self.source[startPos : self.currentPos]
+            token = Token(tokenText, TokenType.STRING)
+        elif self.currentChar.isdigit():
+            startPos = self.currentPos
+            while self.peek().isdigit():
+                self.nextChar()
+            if self.peek() == ".":
+                self.nextChar()
+                
+                if not self.peek().isdigit():
+                    self.abort("Illegal character in number")
+                while self.peek().isdigit():
+                    self.nextChar()
+            tokenText = self.source[startPos : self.currentPos + 1]
+            token = Token(tokenText, TokenType.NUMBER)
+        elif self.currentChar.isalpha():
+            startPos = self.currentPos
+            while self.peek().isalnum():
+                self.nextChar()
+            tokenText = self.source[startPos : self.currentPos +1]
+            keyword = Token.checkIfKeyword(tokenText)
+            if keyword == None:
+                token = Token(tokenText, TokenType.IDENT)
+            else:
+                token = Token(tokenText, keyword)
         elif self.currentChar == "\n":
             token = Token(self.currentChar, TokenType.NEWLINE)
         elif self.currentChar == "\0":
@@ -66,6 +130,12 @@ class Token:
     def __init__(self, tokenText, tokenKind):
         self.text = tokenText
         self.kind = tokenKind
+    @staticmethod
+    def checkIfKeyword(tokenText):
+        for kind in TokenType:
+            if kind.name == tokenText and kind.value >= 100 and kind.value < 200:
+                return kind
+        return None
         
 class TokenType(enum.Enum):
         EOF = -1
