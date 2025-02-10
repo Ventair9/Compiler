@@ -1,4 +1,4 @@
-from main import *
+from lexer import *
 from emit import *
 from parse import *
 import sys
